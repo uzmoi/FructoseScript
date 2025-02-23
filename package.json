@@ -1,0 +1,23 @@
+{
+  "name": "fructosescript",
+  "version": "0.0.1",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uzmoi/FructoseScript.git"
+  },
+  "author": "uzmoi",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/uzmoi/FructoseScript/issues"
+  },
+  "homepage": "https://github.com/uzmoi/FructoseScript#readme",
+  "devDependencies": {
+    "cspell": "^8.17.5",
+    "lefthook": "^1.11.0"
+  }
+}

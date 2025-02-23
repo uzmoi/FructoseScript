@@ -1,0 +1,13 @@
+
+[workspace]
+resolver = "3"
+members = [
+  "crates/fructose_script",
+]
+
+[workspace.package]
+version = "0.0.1"
+authors = ["uzmoi"]
+license = "MIT"
+edition = "2024"
+repository = "https://github.com/uzmoi/FructoseScript"
