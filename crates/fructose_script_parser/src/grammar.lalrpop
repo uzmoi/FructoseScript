@@ -1,0 +1,5 @@
+grammar;
+
+pub FructoseScript: i32 = {
+  "0" => 0,
+};
