@@ -5,3 +5,7 @@ version = 4
 [[package]]
 name = "fructose_script"
 version = "0.0.1"
+
+[[package]]
+name = "fructose_script_parser"
+version = "0.0.1"
