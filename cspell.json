@@ -2,6 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
   "useGitignore": true,
   "ignorePaths": [
+    ".vscode",
     "deno.json",
     "package.json",
     "package-lock.json"
