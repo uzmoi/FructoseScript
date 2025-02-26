@@ -1,0 +1,11 @@
+[package]
+name = "fructose_script_ls"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+repository.workspace = true
+
+[dependencies]
+fructose_script_parser = { version = "0.0.1", path = "../fructose_script_parser" }
+lsp-types = "0.97.0"
