@@ -1,10 +1,12 @@
 pub mod ast;
+mod visit;
 
 use lalrpop_util::{ParseError, lalrpop_mod, lexer};
 
 lalrpop_mod!(grammar);
 
 pub use grammar::FructoseScriptParser;
+pub use visit::Visit;
 
 pub type FructoseParseError<'a> = ParseError<usize, lexer::Token<'a>, &'static str>;
 
