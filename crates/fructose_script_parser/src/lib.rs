@@ -18,8 +18,14 @@ mod tests {
         let stmt = ast::Statement::from(ast::Let {
             name: ast::Ident {
                 value: String::from("a"),
+                range: 4..5,
             },
-            init: ast::NatLiteral { value: 0 }.into(),
+            init: ast::NatLiteral {
+                value: 0,
+                range: 8..9,
+            }
+            .into(),
+            range: 0..10,
         });
         let module = ast::Module {
             items: vec![stmt.into()],
@@ -33,8 +39,14 @@ mod tests {
         let stmt = ast::Statement::from(ast::Assign {
             target: ast::Ident {
                 value: String::from("a"),
+                range: 0..1,
             },
-            value: ast::NatLiteral { value: 0 }.into(),
+            value: ast::NatLiteral {
+                value: 0,
+                range: 4..5,
+            }
+            .into(),
+            range: 0..6,
         });
         let module = ast::Module {
             items: vec![stmt.into()],
@@ -49,15 +61,23 @@ mod tests {
             statements: vec![ast::Statement::from(ast::Let {
                 name: ast::Ident {
                     value: String::from("a"),
+                    range: 6..7,
                 },
-                init: ast::NatLiteral { value: 0 }.into(),
+                init: ast::NatLiteral {
+                    value: 0,
+                    range: 10..11,
+                }
+                .into(),
+                range: 2..12,
             })],
             last: Some(Box::new(
                 ast::Ident {
                     value: String::from("a"),
+                    range: 13..14,
                 }
                 .into(),
             )),
+            range: 0..16,
         });
         let module = ast::Module {
             items: vec![ast::Statement::from(expr).into()],

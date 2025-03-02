@@ -17,11 +17,13 @@ Statement: Statement = {
   <Expression> ";" => Statement::Expression(<>),
 };
 
-Let: Let = "let" <name:Ident> "=" <init:Expression> ";" => Let { name, init };
+Let: Let
+  = <start: @L> "let" <name:Ident> "=" <init:Expression> ";" <end: @R>
+  => Let { name, init, range: start..end };
 
-Assign: Assign = <target:Ident> "=" <value:Expression> ";" => {
-  Assign { target, value }
-};
+Assign: Assign
+  = <start: @L> <target:Ident> "=" <value:Expression> ";" <end: @R>
+  => Assign { target, value, range: start..end };
 
 Expression: Expression = {
   Ident => Expression::Ident(<>),
@@ -29,12 +31,19 @@ Expression: Expression = {
   Block => Expression::Block(<>),
 };
 
-Ident: Ident = <i:r"[A-Za-z]+"> => Ident { value: i.to_string() };
+Ident: Ident = <start: @L> <i:r"[A-Za-z]+"> <end: @R>
+  => Ident { value: i.to_string(), range: start..end };
 
-NatLiteral: NatLiteral = r"[0-9][0-9_]*" => NatLiteral {
-  value: u32::from_str(<>).unwrap(),
-};
+NatLiteral: NatLiteral = <start: @L> <nat:r"[0-9][0-9_]*"> <end: @R>
+  => NatLiteral {
+    value: u32::from_str(nat).unwrap(),
+    range: start..end,
+  };
 
-Block: Block = "{" <statements:Statement*> <last:Expression?> "}" => {
-  Block { statements, last: last.map(Box::new) }
-};
+Block: Block
+  = <start: @L> "{" <statements:Statement*> <last:Expression?> "}" <end: @R>
+  => Block {
+    statements,
+    last: last.map(Box::new),
+    range: start..end,
+  };

@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 macro_rules! enum_ {
     ($(#[$attr:meta])* $vis:vis enum $name:ident [ $($xs:ident),+ ]) => {
         $(#[$attr])* $vis enum $name {
@@ -32,12 +34,14 @@ enum_!(
 pub struct Let {
     pub name: Ident,
     pub init: Expression,
+    pub range: Range<usize>,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct Assign {
     pub target: Ident,
     pub value: Expression,
+    pub range: Range<usize>,
 }
 
 enum_!(
@@ -48,15 +52,18 @@ enum_!(
 #[derive(Debug, PartialEq)]
 pub struct Ident {
     pub value: String,
+    pub range: Range<usize>,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct NatLiteral {
     pub value: u32,
+    pub range: Range<usize>,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct Block {
     pub statements: Vec<Statement>,
     pub last: Option<Box<Expression>>,
+    pub range: Range<usize>,
 }
