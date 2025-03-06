@@ -48,8 +48,18 @@ pub struct ScopeBuilder {
 
 impl ScopeBuilder {
     #[inline]
-    fn current_scope(&mut self) -> &mut Scope {
-        &mut self.scopes[self.current_scope_id.0]
+    pub fn new() -> Self {
+        let id = ScopeId(0);
+        let root_scope = Scope {
+            id,
+            parent: None,
+            entries: HashMap::new(),
+        };
+        Self {
+            scopes: vec![root_scope],
+            current_scope_id: id,
+            errors: Vec::new(),
+        }
     }
 
     fn child(&mut self, parent_scope_id: ScopeId) -> &mut Scope {
@@ -74,12 +84,13 @@ impl ScopeBuilder {
                 return scope.entries.get_mut(name);
             }
 
-            let Some(parent_scope_id) = scope.parent else {
-                return None;
-            };
-
-            scope_id = parent_scope_id;
+            scope_id = scope.parent?;
         }
+    }
+
+    #[inline]
+    fn current_scope(&mut self) -> &mut Scope {
+        &mut self.scopes[self.current_scope_id.0]
     }
 }
 
