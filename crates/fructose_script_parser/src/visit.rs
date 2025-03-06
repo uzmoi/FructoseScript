@@ -29,7 +29,9 @@ pub trait Visit {
         match node {
             Statement::Let(node) => self.visit_let(node),
             Statement::Assign(node) => self.visit_assign(node),
-            Statement::Expression(node) => self.visit_expression(node),
+            Statement::Expression(node) => {
+                self.visit_expression(node);
+            }
         }
     }
 
@@ -45,7 +47,9 @@ pub trait Visit {
 
     // MARK: Expression
 
-    fn visit_expression(&mut self, node: &ast::Expression) {
+    type Result: Default;
+
+    fn visit_expression(&mut self, node: &ast::Expression) -> Self::Result {
         use ast::Expression;
         match node {
             Expression::Ident(node) => self.visit_ident(node),
@@ -55,22 +59,30 @@ pub trait Visit {
     }
 
     #[inline]
-    fn visit_ident(&mut self, _node: &ast::Ident) {}
+    fn visit_ident(&mut self, _node: &ast::Ident) -> Self::Result {
+        Default::default()
+    }
 
     #[inline]
-    fn visit_nat_literal(&mut self, _node: &ast::NatLiteral) {}
+    fn visit_nat_literal(&mut self, _node: &ast::NatLiteral) -> Self::Result {
+        Default::default()
+    }
 
-    fn visit_block(&mut self, node: &ast::Block) {
+    fn visit_block(&mut self, node: &ast::Block) -> Self::Result {
         self.enter_scope();
 
         for statement in &node.statements {
             self.visit_statement(statement);
         }
 
-        if let Some(last) = &node.last {
+        let result = if let Some(last) = &node.last {
             self.visit_expression(last)
-        }
+        } else {
+            Default::default()
+        };
 
         self.leave_scope();
+
+        result
     }
 }

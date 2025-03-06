@@ -95,6 +95,8 @@ impl ScopeBuilder {
 }
 
 impl Visit for ScopeBuilder {
+    type Result = ();
+
     fn visit_let(&mut self, node: &ast::Let) {
         self.visit_expression(&node.init);
         let _var = self.current_scope().define(
