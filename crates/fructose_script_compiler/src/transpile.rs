@@ -123,7 +123,14 @@ impl<'a> Visit for JsGenerator<'a> {
             span: span(&node.range),
             operator: AssignmentOperator::Assign,
             left: AssignmentTarget::AssignmentTargetIdentifier(target),
-            right: value.unwrap(),
+            right: value.unwrap_or_else(|| {
+                let undefined = self.boxed(oxc_ast::IdentifierReference {
+                    span: SPAN,
+                    name: self.atom("undefined"),
+                    reference_id: Cell::new(None),
+                });
+                Expression::Identifier(undefined)
+            }),
         });
 
         let statement = self.boxed(oxc_ast::ExpressionStatement {
