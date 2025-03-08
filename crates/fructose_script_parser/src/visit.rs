@@ -90,8 +90,8 @@ pub trait Visit {
     fn visit_fn(&mut self, node: &ast::Fn) -> Self::Result {
         self.enter_scope();
 
-        for argument in &node.parameters {
-            self.visit_ident(argument);
+        for parameter in &node.parameters {
+            self.visit_ident(parameter);
         }
 
         self.visit_expression(&node.body);

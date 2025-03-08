@@ -122,7 +122,7 @@ impl Visit for ScopeBuilder {
             );
 
             // TODO: このnodeからvarを辿れるようにする。
-            // argument.var = var;
+            // parameter.var = var;
         }
 
         self.visit_expression(&node.body);
