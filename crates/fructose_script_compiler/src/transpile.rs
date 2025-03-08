@@ -4,7 +4,7 @@ use fructose_script_parser::{Visit, ast};
 use oxc::{
     allocator::{Allocator, FromIn},
     ast::ast::{self as oxc_ast, Expression, Statement},
-    span::{Atom, GetSpan, Span},
+    span::{Atom, GetSpan, SPAN, Span},
 };
 
 struct Block<'a> {
@@ -36,6 +36,20 @@ impl<'a> JsGenerator<'a> {
         Self {
             allocator,
             current_block: Block::new(allocator),
+        }
+    }
+
+    pub fn into_program(self) -> oxc_ast::Program<'a> {
+        use oxc_ast::{Program, SourceType};
+        Program {
+            span: SPAN,
+            source_type: SourceType::mjs(),
+            source_text: "",
+            comments: oxc::allocator::Vec::new_in(self.allocator),
+            hashbang: None,
+            directives: oxc::allocator::Vec::new_in(self.allocator),
+            body: self.current_block.statements,
+            scope_id: Cell::new(None),
         }
     }
 
