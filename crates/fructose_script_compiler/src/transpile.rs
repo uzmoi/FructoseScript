@@ -1,4 +1,4 @@
-use std::{cell::Cell, ops::Range};
+use std::{cell::Cell, mem, ops::Range};
 
 use fructose_script_parser::{Visit, ast};
 use oxc::{
@@ -27,7 +27,7 @@ impl<'a> Block<'a> {
 
 pub struct JsGenerator<'a> {
     allocator: &'a Allocator,
-    current_block: Option<Block<'a>>,
+    current_block: Block<'a>,
 }
 
 impl<'a> JsGenerator<'a> {
@@ -35,7 +35,7 @@ impl<'a> JsGenerator<'a> {
     pub fn new(allocator: &'a Allocator) -> Self {
         Self {
             allocator,
-            current_block: None,
+            current_block: Block::new(allocator),
         }
     }
 
@@ -91,8 +91,8 @@ impl<'a> Visit for JsGenerator<'a> {
             declare: false,
         });
 
-        let current_block = self.current_block.as_mut().unwrap();
-        current_block.append_statement(Statement::VariableDeclaration(statement));
+        self.current_block
+            .append_statement(Statement::VariableDeclaration(statement));
     }
 
     fn visit_assign(&mut self, node: &ast::Assign) {
@@ -117,8 +117,8 @@ impl<'a> Visit for JsGenerator<'a> {
             expression: Expression::AssignmentExpression(assignment),
         });
 
-        let current_block = self.current_block.as_mut().unwrap();
-        current_block.append_statement(Statement::ExpressionStatement(statement));
+        self.current_block
+            .append_statement(Statement::ExpressionStatement(statement));
     }
 
     type Result = Option<Expression<'a>>;
@@ -162,9 +162,7 @@ impl<'a> Visit for JsGenerator<'a> {
             FormalParameter, FormalParameterKind, FormalParameters, FunctionBody, ReturnStatement,
         };
 
-        let parent_block = self.current_block.take();
-
-        self.current_block = Some(Block::new(self.allocator));
+        let parent_block = mem::replace(&mut self.current_block, Block::new(self.allocator));
 
         let mut parameters = oxc::allocator::Vec::new_in(self.allocator);
         for parameter in &node.parameters {
@@ -194,11 +192,12 @@ impl<'a> Visit for JsGenerator<'a> {
                 argument: Some(result),
             });
 
-            let current_block = self.current_block.as_mut().unwrap();
-            current_block.append_statement(Statement::ReturnStatement(r#return));
+            self.current_block
+                .append_statement(Statement::ReturnStatement(r#return));
         }
 
-        let statements = self.current_block.take().unwrap().statements;
+        let current_block = mem::replace(&mut self.current_block, parent_block);
+
         let arrow_fn = self.boxed(ArrowFunctionExpression {
             span: span(&node.range),
             expression: false,
@@ -214,12 +213,10 @@ impl<'a> Visit for JsGenerator<'a> {
             body: self.boxed(FunctionBody {
                 span: span(&node.range),
                 directives: oxc::allocator::Vec::new_in(self.allocator),
-                statements,
+                statements: current_block.statements,
             }),
             scope_id: Cell::new(None),
         });
-
-        self.current_block = parent_block;
 
         Some(Expression::ArrowFunctionExpression(arrow_fn))
     }
