@@ -55,6 +55,7 @@ pub trait Visit {
             Expression::Ident(node) => self.visit_ident(node),
             Expression::NatLiteral(node) => self.visit_nat_literal(node),
             Expression::Block(node) => self.visit_block(node),
+            Expression::Fn(node) => self.visit_fn(node),
         }
     }
 
@@ -84,5 +85,19 @@ pub trait Visit {
         self.leave_scope();
 
         result
+    }
+
+    fn visit_fn(&mut self, node: &ast::Fn) -> Self::Result {
+        self.enter_scope();
+
+        for argument in &node.parameters {
+            self.visit_ident(argument);
+        }
+
+        self.visit_expression(&node.body);
+
+        self.leave_scope();
+
+        Default::default()
     }
 }

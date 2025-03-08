@@ -110,6 +110,26 @@ impl Visit for ScopeBuilder {
         // node.var = var;
     }
 
+    fn visit_fn(&mut self, node: &ast::Fn) {
+        self.enter_scope();
+
+        for parameter in &node.parameters {
+            let _var = self.current_scope().define(
+                parameter.value.clone(),
+                Location {
+                    range: parameter.range.clone(),
+                },
+            );
+
+            // TODO: このnodeからvarを辿れるようにする。
+            // argument.var = var;
+        }
+
+        self.visit_expression(&node.body);
+
+        self.leave_scope();
+    }
+
     fn visit_ident(&mut self, node: &ast::Ident) {
         if let Some(var) = self.reference(&node.value) {
             var.references.push(Location {

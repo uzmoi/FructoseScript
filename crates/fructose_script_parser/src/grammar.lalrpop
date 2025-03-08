@@ -29,6 +29,7 @@ Expression: Expression = {
   Ident => Expression::Ident(<>),
   NatLiteral => Expression::NatLiteral(<>),
   Block => Expression::Block(<>),
+  Fn => Expression::Fn(<>),
 };
 
 Ident: Ident = <start: @L> <i:r"[A-Za-z]+"> <end: @R>
@@ -47,3 +48,21 @@ Block: Block
     last: last.map(Box::new),
     range: start..end,
   };
+
+Fn: Fn
+  = <start: @L> "(" <parameters:Comma<Ident>> ")" "=>" <body:Expression> <end: @R>
+  => Fn {
+    parameters,
+    body: Box::new(body),
+    range: start..end,
+  };
+
+Comma<T>: Vec<T> = {
+  <mut v:(<T> ",")*> <e:T?> => match e {
+    None => v,
+    Some(e) => {
+      v.push(e);
+      v
+    }
+  }
+};

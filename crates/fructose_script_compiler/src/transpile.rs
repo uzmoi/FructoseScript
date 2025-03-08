@@ -4,7 +4,7 @@ use fructose_script_parser::{Visit, ast};
 use oxc::{
     allocator::{Allocator, FromIn},
     ast::ast::{self as oxc_ast, Expression, Statement},
-    span::{Atom, Span},
+    span::{Atom, GetSpan, Span},
 };
 
 struct Block<'a> {
@@ -154,5 +154,73 @@ impl<'a> Visit for JsGenerator<'a> {
         node.last
             .as_ref()
             .and_then(|last| self.visit_expression(last))
+    }
+
+    fn visit_fn(&mut self, node: &ast::Fn) -> Self::Result {
+        use oxc_ast::{
+            ArrowFunctionExpression, BindingIdentifier, BindingPattern, BindingPatternKind,
+            FormalParameter, FormalParameterKind, FormalParameters, FunctionBody, ReturnStatement,
+        };
+
+        let parent_block = self.current_block.take();
+
+        self.current_block = Some(Block::new(self.allocator));
+
+        let mut parameters = oxc::allocator::Vec::new_in(self.allocator);
+        for parameter in &node.parameters {
+            let binding_identifier = self.boxed(BindingIdentifier {
+                span: span(&parameter.range),
+                name: self.atom(&parameter.value),
+                symbol_id: Cell::new(None),
+            });
+
+            parameters.push(FormalParameter {
+                span: span(&parameter.range),
+                decorators: oxc::allocator::Vec::new_in(self.allocator),
+                pattern: BindingPattern {
+                    kind: BindingPatternKind::BindingIdentifier(binding_identifier),
+                    type_annotation: None,
+                    optional: false,
+                },
+                accessibility: None,
+                readonly: false,
+                r#override: false,
+            });
+        }
+
+        if let Some(result) = self.visit_expression(&node.body) {
+            let r#return = self.boxed(ReturnStatement {
+                span: result.span(),
+                argument: Some(result),
+            });
+
+            let current_block = self.current_block.as_mut().unwrap();
+            current_block.append_statement(Statement::ReturnStatement(r#return));
+        }
+
+        let statements = self.current_block.take().unwrap().statements;
+        let arrow_fn = self.boxed(ArrowFunctionExpression {
+            span: span(&node.range),
+            expression: false,
+            r#async: false,
+            type_parameters: None,
+            params: self.boxed(FormalParameters {
+                span: span(&node.range),
+                kind: FormalParameterKind::ArrowFormalParameters,
+                items: parameters,
+                rest: None,
+            }),
+            return_type: None,
+            body: self.boxed(FunctionBody {
+                span: span(&node.range),
+                directives: oxc::allocator::Vec::new_in(self.allocator),
+                statements,
+            }),
+            scope_id: Cell::new(None),
+        });
+
+        self.current_block = parent_block;
+
+        Some(Expression::ArrowFunctionExpression(arrow_fn))
     }
 }

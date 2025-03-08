@@ -46,7 +46,7 @@ pub struct Assign {
 
 enum_!(
     #[derive(Debug, PartialEq)]
-    pub enum Expression [Ident, NatLiteral, Block]
+    pub enum Expression [Ident, NatLiteral, Block, Fn]
 );
 
 #[derive(Debug, PartialEq)]
@@ -65,5 +65,12 @@ pub struct NatLiteral {
 pub struct Block {
     pub statements: Vec<Statement>,
     pub last: Option<Box<Expression>>,
+    pub range: Range<usize>,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Fn {
+    pub parameters: Vec<Ident>,
+    pub body: Box<Expression>,
     pub range: Range<usize>,
 }
