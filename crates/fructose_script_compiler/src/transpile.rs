@@ -96,7 +96,7 @@ impl<'a> Visit for JsGenerator<'a> {
         let target = self
             .ast
             .simple_assignment_target_assignment_target_identifier(
-                span(&node.range),
+                span(&node.target.range),
                 &node.target.value,
             );
 
