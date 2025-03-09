@@ -1,14 +1,14 @@
-use std::{cell::Cell, mem, ops::Range};
+use std::{mem, ops::Range};
 
 use fructose_script_parser::{Visit, ast};
 use oxc::{
-    allocator::{Allocator, FromIn},
-    ast::ast::{self as oxc_ast, Expression, Statement},
-    span::{Atom, GetSpan, SPAN, Span},
+    allocator::Allocator,
+    ast::{AstBuilder, NONE, ast as oxc_ast},
+    span::{GetSpan, SPAN, Span},
 };
 
 struct Block<'a> {
-    statements: oxc::allocator::Vec<'a, Statement<'a>>,
+    statements: oxc::allocator::Vec<'a, oxc_ast::Statement<'a>>,
 }
 
 impl<'a> Block<'a> {
@@ -20,13 +20,13 @@ impl<'a> Block<'a> {
     }
 
     #[inline]
-    fn append_statement(&mut self, statement: Statement<'a>) {
+    fn append_statement(&mut self, statement: oxc_ast::Statement<'a>) {
         self.statements.push(statement);
     }
 }
 
 pub struct JsGenerator<'a> {
-    allocator: &'a Allocator,
+    ast: AstBuilder<'a>,
     current_block: Block<'a>,
 }
 
@@ -34,32 +34,23 @@ impl<'a> JsGenerator<'a> {
     #[inline]
     pub fn new(allocator: &'a Allocator) -> Self {
         Self {
-            allocator,
+            ast: AstBuilder::new(allocator),
             current_block: Block::new(allocator),
         }
     }
 
     pub fn into_program(self) -> oxc_ast::Program<'a> {
-        use oxc_ast::{Program, SourceType};
-        Program {
-            span: SPAN,
-            source_type: SourceType::mjs(),
-            source_text: "",
-            comments: oxc::allocator::Vec::new_in(self.allocator),
-            hashbang: None,
-            directives: oxc::allocator::Vec::new_in(self.allocator),
-            body: self.current_block.statements,
-            scope_id: Cell::new(None),
-        }
-    }
+        use oxc_ast::SourceType;
 
-    #[inline]
-    fn boxed<T>(&self, value: T) -> oxc::allocator::Box<'a, T> {
-        oxc::allocator::Box::new_in(value, self.allocator)
-    }
-    #[inline]
-    fn atom(&self, name: &str) -> Atom<'a> {
-        Atom::from_in(name, self.allocator)
+        self.ast.program(
+            SPAN,
+            SourceType::mjs(),
+            "",
+            self.ast.vec(),
+            None,
+            self.ast.vec(),
+            self.current_block.statements,
+        )
     }
 }
 
@@ -70,101 +61,77 @@ fn span(range: &Range<usize>) -> Span {
 
 impl<'a> Visit for JsGenerator<'a> {
     fn visit_let(&mut self, node: &ast::Let) {
-        use oxc_ast::{
-            BindingIdentifier, BindingPattern, BindingPatternKind, VariableDeclaration,
-            VariableDeclarationKind, VariableDeclarator,
-        };
+        use oxc_ast::VariableDeclarationKind;
 
         let value = self.visit_expression(&node.init);
 
-        let mut declarations = oxc::allocator::Vec::new_in(self.allocator);
-        let binding_identifier = self.boxed(BindingIdentifier {
-            span: span(&node.name.range),
-            name: self.atom(&node.name.value),
-            symbol_id: Cell::new(None),
-        });
+        let pattern = self.ast.binding_pattern(
+            self.ast
+                .binding_pattern_kind_binding_identifier(span(&node.name.range), &node.name.value),
+            NONE,
+            false,
+        );
 
-        let span = span(&node.range);
+        let declarations = self.ast.vec1(self.ast.variable_declarator(
+            span(&node.range),
+            VariableDeclarationKind::Let,
+            pattern,
+            value,
+            false,
+        ));
 
-        declarations.push(VariableDeclarator {
-            span,
-            kind: VariableDeclarationKind::Let,
-            id: BindingPattern {
-                kind: BindingPatternKind::BindingIdentifier(binding_identifier),
-                type_annotation: None,
-                optional: false,
-            },
-            init: value,
-            definite: false,
-        });
-
-        let statement = self.boxed(VariableDeclaration {
-            span,
-            kind: VariableDeclarationKind::Let,
+        let declaration = self.ast.declaration_variable(
+            span(&node.range),
+            VariableDeclarationKind::Let,
             declarations,
-            declare: false,
-        });
+            false,
+        );
 
-        self.current_block
-            .append_statement(Statement::VariableDeclaration(statement));
+        self.current_block.append_statement(declaration.into());
     }
 
     fn visit_assign(&mut self, node: &ast::Assign) {
-        use oxc_ast::{AssignmentExpression, AssignmentOperator, AssignmentTarget};
+        use oxc_ast::AssignmentOperator;
 
-        let target = self.boxed(oxc_ast::IdentifierReference {
-            span: span(&node.range),
-            name: self.atom(&node.target.value),
-            reference_id: Cell::new(None),
-        });
+        let target = self
+            .ast
+            .simple_assignment_target_assignment_target_identifier(
+                span(&node.range),
+                &node.target.value,
+            );
+
         let value = self.visit_expression(&node.value);
 
-        let assignment = self.boxed(AssignmentExpression {
-            span: span(&node.range),
-            operator: AssignmentOperator::Assign,
-            left: AssignmentTarget::AssignmentTargetIdentifier(target),
-            right: value.unwrap_or_else(|| {
-                let undefined = self.boxed(oxc_ast::IdentifierReference {
-                    span: SPAN,
-                    name: self.atom("undefined"),
-                    reference_id: Cell::new(None),
-                });
-                Expression::Identifier(undefined)
-            }),
-        });
+        let assignment = self.ast.expression_assignment(
+            span(&node.range),
+            AssignmentOperator::Assign,
+            target.into(),
+            value.unwrap_or_else(|| self.ast.void_0(SPAN)),
+        );
 
-        let statement = self.boxed(oxc_ast::ExpressionStatement {
-            span: span(&node.range),
-            expression: Expression::AssignmentExpression(assignment),
-        });
+        let statement = self.ast.statement_expression(span(&node.range), assignment);
 
-        self.current_block
-            .append_statement(Statement::ExpressionStatement(statement));
+        self.current_block.append_statement(statement);
     }
 
-    type Result = Option<Expression<'a>>;
+    type Result = Option<oxc_ast::Expression<'a>>;
 
     fn visit_ident(&mut self, node: &ast::Ident) -> Self::Result {
-        let identifier = self.boxed(oxc_ast::IdentifierReference {
-            span: span(&node.range),
-            name: self.atom(&node.value),
-            reference_id: Cell::new(None),
-        });
-
-        Some(Expression::Identifier(identifier))
+        Some(
+            self.ast
+                .expression_identifier(span(&node.range), &node.value),
+        )
     }
 
     fn visit_nat_literal(&mut self, node: &ast::NatLiteral) -> Self::Result {
-        use oxc_ast::{NumberBase, NumericLiteral};
+        use oxc_ast::NumberBase;
 
-        let numeric_literal = self.boxed(NumericLiteral {
-            span: span(&node.range),
-            value: node.value as f64,
-            raw: None,
-            base: NumberBase::Decimal,
-        });
-
-        Some(Expression::NumericLiteral(numeric_literal))
+        Some(self.ast.expression_numeric_literal(
+            span(&node.range),
+            node.value as f64,
+            None,
+            NumberBase::Decimal,
+        ))
     }
 
     fn visit_block(&mut self, node: &ast::Block) -> Self::Result {
@@ -178,67 +145,55 @@ impl<'a> Visit for JsGenerator<'a> {
     }
 
     fn visit_fn(&mut self, node: &ast::Fn) -> Self::Result {
-        use oxc_ast::{
-            ArrowFunctionExpression, BindingIdentifier, BindingPattern, BindingPatternKind,
-            FormalParameter, FormalParameterKind, FormalParameters, FunctionBody, ReturnStatement,
-        };
+        use oxc_ast::FormalParameterKind;
 
-        let parent_block = mem::replace(&mut self.current_block, Block::new(self.allocator));
+        let parent_block = mem::replace(&mut self.current_block, Block::new(self.ast.allocator));
 
-        let mut parameters = oxc::allocator::Vec::new_in(self.allocator);
+        let mut parameters = self.ast.vec();
         for parameter in &node.parameters {
-            let binding_identifier = self.boxed(BindingIdentifier {
-                span: span(&parameter.range),
-                name: self.atom(&parameter.value),
-                symbol_id: Cell::new(None),
-            });
+            let pattern = self.ast.binding_pattern(
+                self.ast.binding_pattern_kind_binding_identifier(
+                    span(&parameter.range),
+                    &parameter.value,
+                ),
+                NONE,
+                false,
+            );
 
-            parameters.push(FormalParameter {
-                span: span(&parameter.range),
-                decorators: oxc::allocator::Vec::new_in(self.allocator),
-                pattern: BindingPattern {
-                    kind: BindingPatternKind::BindingIdentifier(binding_identifier),
-                    type_annotation: None,
-                    optional: false,
-                },
-                accessibility: None,
-                readonly: false,
-                r#override: false,
-            });
+            parameters.push(self.ast.formal_parameter(
+                span(&parameter.range),
+                self.ast.vec(),
+                pattern,
+                None,
+                false,
+                false,
+            ));
         }
 
         if let Some(result) = self.visit_expression(&node.body) {
-            let r#return = self.boxed(ReturnStatement {
-                span: result.span(),
-                argument: Some(result),
-            });
-
-            self.current_block
-                .append_statement(Statement::ReturnStatement(r#return));
+            let r#return = self.ast.statement_return(result.span(), Some(result));
+            self.current_block.append_statement(r#return);
         }
 
         let current_block = mem::replace(&mut self.current_block, parent_block);
 
-        let arrow_fn = self.boxed(ArrowFunctionExpression {
-            span: span(&node.range),
-            expression: false,
-            r#async: false,
-            type_parameters: None,
-            params: self.boxed(FormalParameters {
-                span: span(&node.range),
-                kind: FormalParameterKind::ArrowFormalParameters,
-                items: parameters,
-                rest: None,
-            }),
-            return_type: None,
-            body: self.boxed(FunctionBody {
-                span: span(&node.range),
-                directives: oxc::allocator::Vec::new_in(self.allocator),
-                statements: current_block.statements,
-            }),
-            scope_id: Cell::new(None),
-        });
-
-        Some(Expression::ArrowFunctionExpression(arrow_fn))
+        Some(self.ast.expression_arrow_function(
+            span(&node.range),
+            false,
+            false,
+            NONE,
+            self.ast.alloc_formal_parameters(
+                span(&node.range),
+                FormalParameterKind::ArrowFormalParameters,
+                parameters,
+                NONE,
+            ),
+            NONE,
+            self.ast.alloc_function_body(
+                span(&node.range),
+                self.ast.vec(),
+                current_block.statements,
+            ),
+        ))
     }
 }
