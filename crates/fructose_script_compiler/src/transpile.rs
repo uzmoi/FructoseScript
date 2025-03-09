@@ -149,8 +149,7 @@ impl<'a> Visit for JsGenerator<'a> {
 
         let parent_block = mem::replace(&mut self.current_block, Block::new(self.ast.allocator));
 
-        let mut parameters = self.ast.vec();
-        for parameter in &node.parameters {
+        let params = node.parameters.iter().map(|parameter| {
             let pattern = self.ast.binding_pattern(
                 self.ast.binding_pattern_kind_binding_identifier(
                     span(&parameter.range),
@@ -160,15 +159,22 @@ impl<'a> Visit for JsGenerator<'a> {
                 false,
             );
 
-            parameters.push(self.ast.formal_parameter(
+            self.ast.formal_parameter(
                 span(&parameter.range),
                 self.ast.vec(),
                 pattern,
                 None,
                 false,
                 false,
-            ));
-        }
+            )
+        });
+
+        let params = self.ast.alloc_formal_parameters(
+            span(&node.range),
+            FormalParameterKind::ArrowFormalParameters,
+            self.ast.vec_from_iter(params),
+            NONE,
+        );
 
         if let Some(result) = self.visit_expression(&node.body) {
             let r#return = self.ast.statement_return(result.span(), Some(result));
@@ -182,12 +188,7 @@ impl<'a> Visit for JsGenerator<'a> {
             false,
             false,
             NONE,
-            self.ast.alloc_formal_parameters(
-                span(&node.range),
-                FormalParameterKind::ArrowFormalParameters,
-                parameters,
-                NONE,
-            ),
+            params,
             NONE,
             self.ast.alloc_function_body(
                 span(&node.range),
