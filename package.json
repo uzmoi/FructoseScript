@@ -17,8 +17,13 @@
     "url": "https://github.com/uzmoi/FructoseScript/issues"
   },
   "homepage": "https://github.com/uzmoi/FructoseScript#readme",
+  "dependencies": {
+    "@volar/language-core": "^2.4.23",
+    "@volar/typescript": "^2.4.23"
+  },
   "devDependencies": {
     "cspell": "^8.19.4",
+    "fructosescript": "workspace:",
     "lefthook": "^1.13.6",
     "prettier": "^3.6.2",
     "typescript": "^5.9.3"
