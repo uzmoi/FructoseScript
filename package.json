@@ -18,9 +18,9 @@
   },
   "homepage": "https://github.com/uzmoi/FructoseScript#readme",
   "devDependencies": {
-    "cspell": "^8.17.5",
-    "lefthook": "^1.11.0",
+    "cspell": "^8.19.4",
+    "lefthook": "^1.13.6",
     "prettier": "^3.6.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.9.3"
   }
 }
