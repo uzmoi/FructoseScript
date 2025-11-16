@@ -1,0 +1,13 @@
+{
+  "include": ["src"],
+  "compilerOptions": {
+    "module": "esnext",
+    "target": "esnext",
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "forceConsistentCasingInFileNames": true,
+    "libReplacement": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true
+  }
+}
