@@ -3,8 +3,16 @@
   "name": "fructosescript",
   "version": "0.0.1",
   "description": "",
-  "main": "dist/index.js",
+  "type": "module",
+  "main": "dist/mod.mjs",
+  "types": "dist/mod.d.mts",
+  "exports": {
+    ".": "./dist/mod.mjs",
+    "./ts-plugin": "./dist/index.cjs"
+  },
+  "sideEffects": false,
   "scripts": {
+    "build": "tsdown",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -26,6 +34,7 @@
     "fructosescript": "workspace:",
     "lefthook": "^1.13.6",
     "prettier": "^3.6.2",
+    "tsdown": "^0.16.1",
     "typescript": "^5.9.3"
   }
 }
