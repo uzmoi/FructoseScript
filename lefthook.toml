@@ -2,5 +2,8 @@
 [pre-commit]
 parallel = true
 
+[pre-commit.commands.prettier]
+run = "pnpm exec prettier --check --ignore-unknown {staged_files}"
+
 [pre-commit.commands.cSpell]
-run = "npx cspell lint --no-progress --no-must-find-files {staged_files}"
+run = "pnpm exec cspell lint --no-progress --no-must-find-files {staged_files}"
